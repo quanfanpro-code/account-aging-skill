@@ -1,0 +1,17 @@
+# Python 缓存
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 输出文件（集成验证脚本生成的 Excel 产物）
+output/
+*.bak
+集成验证_*.xlsx
+
+# 客户资料、agent运行配置及本地输出不进入技能仓库
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.json
+!references/*.json

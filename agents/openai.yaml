@@ -1,0 +1,3 @@
+interface:
+  display_name: "往来账龄分析"
+  short_description: "通过对话计算往来账龄，保留暂估及票据连续计龄和可追溯依据"
