@@ -1,0 +1,44 @@
+内置名称归一及登记查询的来源说明
+
+名称清洗与表格处理源自用户提供的 name-matching：
+https://github.com/quanfanpro-code/name-matching
+基线提交：b642691915e4776e76723e116091caee9c95a8f7
+源项目采用与本项目相同的 GNU Affero General Public License 第3版，完整许可见根目录 LICENSE。
+本包实际包含归一引擎和表格工具，并加入期初及期间统一处理、归一依据、登记身份边界和账龄入口衔接；运行不引用源技能安装路径。
+
+为去除名称技能原有的外部技能依赖，企业搜索、登记详情、股东查询与浏览器取数通道取自本机 related-party-identification：
+https://github.com/quanfanpro-code/related-party-identification
+取用时仓库提交：d1fac340430d10b95b7746dbac4062853a2d30e0
+查询客户端裁减为搜索、企业详情、股东三项业务，保留所需限速、重试和缓存；浏览器传输层另检查登录状态。不包含关联方分析、股权穿透或批量接口、维度导出。搜索存在歧义时先选定具体企业，不遍查整批候选。
+
+查询客户端保留其原始文件头：改编自 nigo（涂佳兵）的 nigo81/nigo-skills/cicpa-company-query，原始许可为 MIT，文件的本地修改亦按 MIT 发布。原取数项目对上游许可的证据为仓库 README 中的声明，未声称存在未核实的上游独立许可证文件。保留上游作者署名及不作保证的声明。
+
+浏览器传输层为 CPA-Q（quanfanpro-code）的本地实现，沿用本项目许可。它调用外部浏览器工具，本包不分发 OpenCLI 工具或扩展源文件，不把浏览器登录及服务权限描述为随代码自动提供。
+
+实际取用文件的来源和打包哈希见 references/名称归一来源.json。本包的适配不会修改原始名称技能仓库。
+
+名称技能后续提交 c0916f0336250e7be36c2e8a1b563cd349437ee6 已提供自己的单体工商查询。核对该版工商查询.py 的字段映射后，本包补充兼容统一社会信用代码、法定代表人、登记状态、地址及股东的下划线字段；保留本包已有的具体主体选择和错误处理。原名称清洗及表格处理文件在这两版之间没有变化。
+
+MIT 标准许可文本（保留上述上游的许可条件，不宣称取自未核实的独立许可证文件）：
+
+MIT License
+
+Copyright (c) nigo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

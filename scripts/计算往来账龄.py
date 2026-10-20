@@ -14,6 +14,7 @@ from make_excel import make_excel
 from src.core.workflow import AgingWorkflow
 from src.core.report import ReportGenerator
 from src.core.receivable_bills import BillConfirmationRequired
+from src.core.名称归一 import normalize_accounts
 
 DEFAULT_BUCKETS=[(0,365),(365,730),(730,1095),(1095,1460),(1460,1825),(1825,9999)]
 DEFAULT_LABELS=['1年以内','1—2年','2—3年','3—4年','4—5年','5年以上']
@@ -45,6 +46,9 @@ def load_inputs(config):
         opening=pd.DataFrame(columns=['科目编码','科目名称','明细名称','借方余额','贷方余额'])
     else:
         opening=pd.read_excel(source,sheet_name=opening_sheet,header=config.get('opening_header',0)).rename(columns=config.get('opening_columns',{}))
+        if opening.columns.duplicated().any():raise ValueError('期初列映射产生重名列，请选择唯一映射')
+        if '原账行号' not in opening:
+            opening['原账行号']=range(config.get('opening_header',0)+2,len(opening)+config.get('opening_header',0)+2)
         for field in ['科目编码','科目名称','明细名称','借方余额','贷方余额']:
             if field not in opening: raise ValueError('期初表缺少必需列：'+field)
         for field in ['借方余额','贷方余额']:
@@ -66,8 +70,14 @@ def execute(config,*,inspect_only=False):
         raise ValueError('账龄分档须覆盖从0天开始的连续区间')
     labels=config.get('bucket_labels',DEFAULT_LABELS if buckets==DEFAULT_BUCKETS else None)
     ReportGenerator._get_bucket_labels({'buckets':buckets,'bucket_labels':labels})
-    decisions={tuple(item['names']):item.get('canonical') for item in config.get('name_decisions',[])}
+    normalized=normalize_accounts(opening,journal,config)
+    if normalized['status']!='ready':
+        return {'status':normalized['status'],'名称候选数量':normalized['candidate_count'],
+            '名称核查':normalized['pending'],'说明':'先利用账内证据；仍不能确定时调用本包查询名称登记工具，不把技术候选直接退给用户'}
+    opening,journal=normalized['opening'],normalized['journal']
     pending=AgingWorkflow.preflight(opening,journal)
+    decisions=({item.key:None for item in pending.names} if config.get('normalize_names',True) else
+        {tuple(item['names']):item.get('canonical') for item in config.get('name_decisions',[])})
     missing_names=[{'名称':list(item.key),'依据':item.evidence} for item in pending.names if item.key not in decisions]
     assignments=config.get('temporary_assignments',{})
     missing_temporary=[{'科目编码':item.code,'名称':item.name,'建议归属':item.suggested,'依据':item.evidence}
@@ -90,7 +100,8 @@ def execute(config,*,inspect_only=False):
             'opening_date':opening_date,'source_results':flow.source_results,
             'reclassification_records':flow.reclassification_records,
             'offset_records':[item for item in flow.offset_records if item['对抵金额']>.005],
-            'transfer_records':flow.transfer_records,'confirmation_records':flow.confirmation_records,
+            'transfer_records':flow.transfer_records,'confirmation_records':[
+                item for item in flow.confirmation_records if not config.get('normalize_names',True) or item['类型']!='单位名称'],
             'bill_transfer_records':flow.bill_transfer_records,
             'temporary_identification_records':flow.temporary_identification_records}
         for title,frame in generator.build_frames(results,report_config):
@@ -109,10 +120,12 @@ def execute(config,*,inspect_only=False):
             '贷方余额':round(sum(r.closing_balance for r in results if r.direction=='credit'),2),
             '票据承接金额':round(sum(item['承接金额'] for item in flow.bill_transfer_records),2)})
     if inspect_only:
-        return {'status':'ready','读取序时账行数':len(journal),'计算预览':summaries}
+        return {'status':'ready','读取序时账行数':len(journal),'名称归一':normalized['stats'],'计算预览':summaries}
     # 相同日期、金额的两个余额层也可能是真实的两笔款项，不按展示内容去重。
+    if normalized['changes']:frames.append(('名称归一对照',pd.DataFrame(normalized['changes'])))
+    if normalized['decisions']:frames.append(('名称核查依据',pd.DataFrame(normalized['decisions'])))
     frames += [(title,pd.concat(parts,ignore_index=True)) for title,parts in shared.items()]
-    journal_columns=[name for name in ['原账行号','日期','凭证号','科目编码','科目名称','明细名称','借方金额','贷方金额','摘要','票据类型','票据号',
+    journal_columns=[name for name in ['原账行号','日期','凭证号','科目编码','科目名称','原始往来单位','明细名称','借方金额','贷方金额','摘要','票据类型','票据号',
         '原科目编码','原科目名称','原账文件','原账工作表','输入补充依据'] if name in journal]
     frames.append(('计算用序时账',journal[journal_columns].rename(columns={'明细名称':'往来单位'})))
     if not opening.empty: frames.append(('计算用期初',opening))
@@ -136,7 +149,7 @@ def execute(config,*,inspect_only=False):
         book.close()
     with zipfile.ZipFile(output) as archive:
         if archive.testzip() is not None: raise ValueError('导出文件损坏，停止交付')
-    return {'status':'complete','output':str(output),'读取序时账行数':len(journal),'结果':summaries}
+    return {'status':'complete','output':str(output),'读取序时账行数':len(journal),'名称归一':normalized['stats'],'结果':summaries}
 
 
 def main():

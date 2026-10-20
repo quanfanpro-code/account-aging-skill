@@ -1,0 +1,52 @@
+{
+  "说明": "来源用于追溯，运行不读取源仓库或其他技能路径。哈希采用SHA-256：原文件对应来源提交内容，内置文件对应本仓库提交内容；均以Git记录的字节为准，避免Windows检出时换行转换造成误报。",
+  "文件": [
+    {
+      "来源仓库": "https://github.com/quanfanpro-code/name-matching",
+      "来源提交": "b642691915e4776e76723e116091caee9c95a8f7",
+      "原文件": "归一引擎.py",
+      "内置文件": "src/name_matching/归一引擎.py",
+      "原文件哈希": "ef4abb1c18e6beec4e4e497e4a954e3cf5d472cd498c531a560f848739141f16",
+      "内置文件哈希": "ef4abb1c18e6beec4e4e497e4a954e3cf5d472cd498c531a560f848739141f16",
+      "许可": "AGPL-3.0",
+      "适配说明": "原逻辑保留，按独立包导入"
+    },
+    {
+      "来源仓库": "https://github.com/quanfanpro-code/name-matching",
+      "来源提交": "b642691915e4776e76723e116091caee9c95a8f7",
+      "原文件": "整理表格.py",
+      "内置文件": "src/name_matching/整理表格.py",
+      "原文件哈希": "c4b3807ffc678dd24fb5e47ffbe7999efbbcac14bfd237fb818ba3a62559913c",
+      "内置文件哈希": "b19c83b067ff57cb983a7812d3e8741b78c6c31fe7036d0e63f84dcd47c6003c",
+      "许可": "AGPL-3.0",
+      "适配说明": "包内导入；指定工作表；文本表另存工作簿；拒绝覆盖；汇集全部行的长编号线索"
+    },
+    {
+      "来源仓库": "https://github.com/quanfanpro-code/related-party-identification",
+      "来源提交": "d1fac340430d10b95b7746dbac4062853a2d30e0",
+      "原文件": "scripts/cicpa/client.py",
+      "内置文件": "src/company_registry/client.py",
+      "原文件哈希": "613e8d13a8ded0acd609f468d3c70a0e7f56fa788898cd5ad56cb49afee0ccb8",
+      "内置文件哈希": "c099f9e172a3a016692a5c08f894f8c773ad046fa69134b2cd2e33d0daaa76a1",
+      "许可": "MIT（上游及本地修改，保留文件头）",
+      "适配说明": "裁减为搜索、详情、股东；保留错误处理、限速、重试和缓存；兼容下划线登记及股东字段"
+    },
+    {
+      "来源仓库": "https://github.com/quanfanpro-code/related-party-identification",
+      "来源提交": "d1fac340430d10b95b7746dbac4062853a2d30e0",
+      "原文件": "scripts/cicpa/browser_transport.py",
+      "内置文件": "src/company_registry/browser_transport.py",
+      "原文件哈希": "f82936ffc4f1a2ac032e89ed5e3fc500a457906a8a2ea3f514710f86b61a09d6",
+      "内置文件哈希": "f82936ffc4f1a2ac032e89ed5e3fc500a457906a8a2ea3f514710f86b61a09d6",
+      "许可": "AGPL-3.0（本地浏览器传输实现）",
+      "适配说明": "保留浏览器通道，由本包入口指定会话；不捆绑外部浏览器工具或扩展"
+    }
+  ],
+  "字段映射参考": {
+    "来源仓库": "https://github.com/quanfanpro-code/name-matching",
+    "来源提交": "c0916f0336250e7be36c2e8a1b563cd349437ee6",
+    "原文件": "工商查询.py",
+    "原文件哈希": "1fb990e41ab0a5e5de1d6270f3d929bb462505a0c739e6030be505d3a6fda327",
+    "用途": "核对统一社会信用代码、法定代表人、登记状态、地址、股东名及比例的下划线字段，不引入其默认选择首个候选的做法"
+  }
+}
