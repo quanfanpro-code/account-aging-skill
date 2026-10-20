@@ -116,13 +116,14 @@ def execute(config,*,inspect_only=False):
         '原科目编码','原科目名称','原账文件','原账工作表','输入补充依据'] if name in journal]
     frames.append(('计算用序时账',journal[journal_columns].rename(columns={'明细名称':'往来单位'})))
     if not opening.empty: frames.append(('计算用期初',opening))
-    frames.append(('票据计算口径',pd.DataFrame([
+    if config.get('include_receivable_bills',True):
+        frames.append(('票据计算口径',pd.DataFrame([
         ('法规依据','证监会发行类第5号5-2第五项；适用范围及边界见技能包references/票据连续计龄规定.md'),
         ('连续计龄','商业承兑结算及票据转回应收，保留原始账龄；票据余额独立列示，不与应收账款合成一户'),
         ('匹配口径','同日同凭证同结算客户的对应分录；无明确商业承兑类型时由agent依据资料确认，并记录理由'),
         ('核销口径','普通收付款FIFO；有票据号时核销指定票据，不消耗其他票据'),
         ('期初口径','完整历史且已确认期初为0' if config.get('zero_opening') else '使用提供的期初和期初账龄，缺少原始来源时不虚构旧账龄'),
-    ],columns=['项目','说明'])))
+        ],columns=['项目','说明'])))
     make_excel(frames,str(output))
     book=load_workbook(output)
     try:

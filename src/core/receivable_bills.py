@@ -128,12 +128,12 @@ class ReceivableBillEngine:
                         else:
                             register(source,target,amount,True,'同日同凭证同客户两边对应；发行类第5号5-2第五项：'+RULE_URL)
         if pending: raise BillConfirmationRequired(pending)
-        # 没有凭证号且摘要明确为转科目的记录，不能当作普通收款悄悄重置账龄。
+        # 摘要明示转科目而未关联时，即使有凭证号也不能当普通收款重置账龄。
         linked_ids={r['转出行'] for r in self.policy_records}|{r['转入行'] for r in self.policy_records}
         for row in rows:
             memo=text(row.get('摘要'))
-            if not row['voucher'] and row['id'] not in linked_ids and any(s in memo for s in ('转票据','转为票据','转回应收','退票','拒付')):
-                raise ValueError(f"第{row['id']}行缺少票据转科目对应关系，请提供明确的原账行关联")
+            if row['id'] not in linked_ids and any(s in memo for s in ('转票据','转为票据','转回应收','退票','拒付')):
+                raise ValueError(f"第{row['id']}行缺少票据转科目对应关系，请核对同日对应分录；跨日关联当前不支持，不能按新款重算")
         return links
 
     def _take(self,queue,amount,*,bill_id='',strict=False):

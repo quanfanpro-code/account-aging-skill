@@ -34,9 +34,14 @@ class AgingWorkflow:
         self.confirmation_records += [{'类型':'单位名称','原名称':' / '.join(x.key),'用户决定':name_decisions[x.key] or '分别计算','依据':x.evidence} for x in pending.names]
         def prepare(df,kind):
             df=df.copy()
+            if '科目编码' not in df:df['科目编码']=''
+            if '科目名称' not in df:df['科目名称']=''
             if include_receivable_bills and kind=='journal' and '原账行号' not in df:
                 df['原账行号']=range(2,len(df)+2)
-            selected=filter_current_accounts(df,data_kind=kind,source_label=kind).dataframe
+            names=df['科目名称'].fillna('').astype(str)
+            is_bill=names.str.contains('应收票据') | (df['科目编码'].astype(str).str.startswith('1121') & ~names.str.contains('|'.join(CATEGORIES)))
+            is_bill &= ~names.str.contains('坏账准备|减值准备')
+            selected=filter_current_accounts(df[~is_bill] if include_receivable_bills else df,data_kind=kind,source_label=kind).dataframe
             selected['_原科目编码']=selected.get('原科目编码',selected['科目编码']);selected['_原单位名称']=selected['明细名称']
             selected['_原科目名称']=selected.get('原科目名称',selected['_原科目名称'])
             selected['_是否暂估']=[bool(temporary_account_name(r['科目名称'],r['科目编码'])) for _,r in selected.iterrows()]
@@ -51,8 +56,6 @@ class AgingWorkflow:
                 selected.loc[index,'明细名称']=aliases.get(row['明细名称'],row['明细名称'])
             selected=selected.drop(index=drop)
             if include_receivable_bills:
-                is_bill=df['科目编码'].astype(str).str.startswith('1121') | df['科目名称'].fillna('').astype(str).str.contains('应收票据')
-                is_bill &= ~df['科目名称'].fillna('').astype(str).str.contains('坏账准备|减值准备')
                 bills=df[is_bill].copy()
                 bills['_原科目编码']=bills.get('原科目编码',bills['科目编码'])
                 bills['_原科目名称']=bills.get('原科目名称',bills['科目名称'])

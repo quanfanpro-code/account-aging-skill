@@ -60,7 +60,10 @@ class ReportGenerator:
             ('对抵记录','offset_records',['往来组合','单位','资产侧余额','负债侧余额','对抵金额','最终借方净额']),
         ]:
             records=config.get(key,[])
-            sheets.append((title,pd.DataFrame(records,columns=columns)))
+            frame=pd.DataFrame(records,columns=columns)
+            if key=='transfer_records':
+                frame=frame.rename(columns={'暂估日期':'暂估侧记账日期','正式日期':'正式侧记账日期'})
+            sheets.append((title,frame))
         for title,key in [('计算用期初','opening_source'),('计算用序时账','journal_source')]:
             if isinstance(config.get(key),pd.DataFrame):sheets.append((title,config[key]))
         if config.get('bill_transfer_records'):

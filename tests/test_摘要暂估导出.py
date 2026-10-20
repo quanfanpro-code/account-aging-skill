@@ -23,6 +23,7 @@ def test_实际导出保留暂估识别及输入补充依据(tmp_path):
         'cutoffs':['2025-12-31'],'include_receivable_bills':False,'output':str(output)})
     assert result['status']=='complete'
     book=load_workbook(output,data_only=True)
+    assert '票据计算口径' not in book.sheetnames
     def records(title):
         values=iter(book[title].values);headers=next(values)
         return [dict(zip(headers,row)) for row in values]
@@ -31,5 +32,8 @@ def test_实际导出保留暂估识别及输入补充依据(tmp_path):
     inputs=records('计算用序时账')
     assert inputs[0]['输入补充依据']==journal.iloc[0]['输入补充依据']
     assert inputs[0]['原科目名称']=='应付账款/单位甲'
-    assert records('内部转科目记录')[0]['承接金额']==100
+    transfer=records('内部转科目记录')[0]
+    assert transfer['承接金额']==100
+    assert transfer['暂估侧记账日期']=='2025-06-01'
+    assert '暂估日期' not in transfer
     book.close()
