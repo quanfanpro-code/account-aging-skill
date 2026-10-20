@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import math
+import re
 
 import pandas as pd
 
@@ -76,7 +77,7 @@ class ReceivableBillEngine:
     @staticmethod
     def _commercial(row):
         value=text(row.get('票据类型')) or ' '.join(text(row.get(k)) for k in ('科目名称','_原科目名称','摘要'))
-        return ('商业承兑' in value or value=='商承') and '银行承兑' not in value
+        return ('商业承兑' in value or value=='商承') and not re.search(r'银行承兑|非商业承兑|不是商业承兑|非商承',value)
 
     def _plan(self,rows,decisions):
         by_id={r['id']:r for r in rows}

@@ -65,6 +65,8 @@ class ReportGenerator:
             if isinstance(config.get(key),pd.DataFrame):sheets.append((title,config[key]))
         if config.get('bill_transfer_records'):
             sheets.append(('票据连续计龄依据',pd.DataFrame(config['bill_transfer_records'])))
+        if config.get('temporary_identification_records'):
+            sheets.append(('暂估识别依据',pd.DataFrame(config['temporary_identification_records'])))
         sheets.append(('参数说明',self._build_config(config)))
         return sheets
 

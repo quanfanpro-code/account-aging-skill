@@ -6,7 +6,7 @@ from src.core.preflight import detect,confirmed_aliases,text
 from src.core.current_accounts import ACCOUNT_RULES,CATEGORIES,CATEGORY_COLUMN,DIRECTION_COLUMN,BLANK_DETAIL,temporary_account_name,temporary_account_scope,filter_current_accounts
 from src.core.orchestrator import AgingOrchestrator
 from src.core.fifo_engine import FIFOEngine
-from src.core.temporary_transfers import mark_transfers
+from src.core.temporary_transfers import identify_temporary,mark_transfers
 from src.core.receivable_bills import ReceivableBillEngine
 
 PAIRS=(('应收账款','预收账款'),('预付账款','应付账款'),('其他应收款','其他应付款'),('合同资产','合同负债'))
@@ -63,6 +63,7 @@ class AgingWorkflow:
                 selected=pd.concat([selected,bills],axis=0).sort_index(kind='stable')
             return selected
         self.opening_input=prepare(opening,'opening');self.journal_input=prepare(journal,'journal')
+        self.journal_input,self.temporary_identification_records=identify_temporary(self.journal_input,self.cutoff_date)
         self.journal_input,self.transfer_records=mark_transfers(self.journal_input,self.cutoff_date)
         orch=AgingOrchestrator(self.cutoff_date,self.buckets,opening_date=self.opening_date,opening_aging_columns=self.opening_aging_columns,on_progress=self.on_progress)
         source=orch.run(self.opening_input,self.journal_input)

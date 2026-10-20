@@ -91,7 +91,8 @@ def execute(config,*,inspect_only=False):
             'reclassification_records':flow.reclassification_records,
             'offset_records':[item for item in flow.offset_records if item['对抵金额']>.005],
             'transfer_records':flow.transfer_records,'confirmation_records':flow.confirmation_records,
-            'bill_transfer_records':flow.bill_transfer_records}
+            'bill_transfer_records':flow.bill_transfer_records,
+            'temporary_identification_records':flow.temporary_identification_records}
         for title,frame in generator.build_frames(results,report_config):
             if title=='账龄计算结果':
                 frames.append(('账龄计算结果' if len(cutoffs)==1 else f'{cutoff}账龄结果',frame))
@@ -111,7 +112,8 @@ def execute(config,*,inspect_only=False):
         return {'status':'ready','读取序时账行数':len(journal),'计算预览':summaries}
     # 相同日期、金额的两个余额层也可能是真实的两笔款项，不按展示内容去重。
     frames += [(title,pd.concat(parts,ignore_index=True)) for title,parts in shared.items()]
-    journal_columns=[name for name in ['原账行号','日期','凭证号','科目编码','科目名称','明细名称','借方金额','贷方金额','摘要','票据类型','票据号'] if name in journal]
+    journal_columns=[name for name in ['原账行号','日期','凭证号','科目编码','科目名称','明细名称','借方金额','贷方金额','摘要','票据类型','票据号',
+        '原科目编码','原科目名称','原账文件','原账工作表','输入补充依据'] if name in journal]
     frames.append(('计算用序时账',journal[journal_columns].rename(columns={'明细名称':'往来单位'})))
     if not opening.empty: frames.append(('计算用期初',opening))
     frames.append(('票据计算口径',pd.DataFrame([
