@@ -9,7 +9,6 @@ import zipfile
 sys.dont_write_bytecode=True
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import pandas as pd
-from openpyxl import load_workbook
 from make_excel import make_excel
 from src.core.workflow import AgingWorkflow
 from src.core.report import ReportGenerator
@@ -137,16 +136,12 @@ def execute(config,*,inspect_only=False):
         ('核销口径','普通收付款FIFO；有票据号时核销指定票据，不消耗其他票据'),
         ('期初口径','完整历史且已确认期初为0' if config.get('zero_opening') else '使用提供的期初和期初账龄，缺少原始来源时不虚构旧账龄'),
         ],columns=['项目','说明'])))
-    make_excel(frames,str(output))
-    book=load_workbook(output)
-    try:
-        for title,_ in frames[:len(cutoffs)]:
-            book[title].sheet_properties.tabColor='0070C0'
-        for sheet in book:
-            ReportGenerator._highlight_remarks(sheet)
-        book.save(output)
-    finally:
-        book.close()
+    result_titles={title for title,_ in frames[:len(cutoffs)]}
+    def finish_layout(plans):
+        for tp in plans:
+            if tp.名称 in result_titles: tp.标签色='0070C0'
+            ReportGenerator._highlight_remarks(tp)
+    make_excel(frames,str(output),postprocess=finish_layout)
     with zipfile.ZipFile(output) as archive:
         if archive.testzip() is not None: raise ValueError('导出文件损坏，停止交付')
     return {'status':'complete','output':str(output),'读取序时账行数':len(journal),'名称归一':normalized['stats'],'结果':summaries}

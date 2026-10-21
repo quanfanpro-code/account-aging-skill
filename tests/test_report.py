@@ -34,7 +34,7 @@ def test_备注排版在首次保存前完成(tmp_path, monkeypatch):
     )
     target = tmp_path / '只保存一次.xlsx'
     ReportGenerator().generate(target, [result], {'buckets': [(0, 365)]})
-    assert len(saves) == 1
+    assert saves == []
     book = openpyxl.load_workbook(target)
     assert book['账龄计算结果'].sheet_properties.tabColor.rgb == '000070C0'
     book.close()

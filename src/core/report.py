@@ -7,11 +7,8 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
-from make_excel import make_excel
+from make_excel import ROW_HEIGHT, col_letter, make_excel
 from src.core.current_accounts import BLANK_DETAIL, classify_current_account
 from src.core.models import AgingResult
 from src.core.temporary_transfers import TRANSFER_COLUMNS
@@ -35,10 +32,15 @@ class ReportGenerator:
         aging_results: list[AgingResult],
         config: dict,
     ) -> None:
-        def finish_layout(book):
-            book['账龄计算结果'].sheet_properties.tabColor = '0070C0'
-            self._highlight_remarks(book['账龄计算结果'])
-            self._highlight_remarks(book['期末余额构成及账龄依据'])
+        def finish_layout(plans):
+            by_name = {tp["名称"]: tp for tp in plans}
+            for title in ('账龄计算结果', '期末余额构成及账龄依据'):
+                plan = by_name.get(title)
+                if plan is None:
+                    continue
+                if title == '账龄计算结果':
+                    plan.标签色 = '0070C0'
+                self._highlight_remarks(plan)
 
         make_excel(self.build_frames(aging_results, config), output_path,
                    postprocess=finish_layout)
@@ -127,21 +129,26 @@ class ReportGenerator:
         return remarks
 
     @staticmethod
-    def _highlight_remarks(sheet):
-        column = next((cell.column for cell in sheet[1] if cell.value=='备注'), None)
+    def _highlight_remarks(plan):
+        """备注列宽、换行行高与关键事项醒目样式，写入前落在表计划上。"""
+        rows = plan.get("行") or []
+        column = next((i + 1 for i, value in enumerate(rows[0]) if value == '备注'), None) if rows else None
         if column is None:
             return
-        sheet.column_dimensions[get_column_letter(column)].width = 72
-        for row in range(2, sheet.max_row+1):
-            cell = sheet.cell(row,column)
-            if not cell.value:
+        letter = col_letter(column)
+        plan["列宽"][column - 1] = 72
+        heights = plan.setdefault("行高", {})
+        for row in range(2, len(rows) + 1):
+            value = rows[row - 1][column - 1] if column - 1 < len(rows[row - 1]) else None
+            if not value:
                 continue
-            cell.alignment = Alignment(horizontal='left',vertical='center',wrap_text=True)
-            width = sum(2 if ord(char)>127 else 1 for char in str(cell.value))
-            sheet.row_dimensions[row].height = max(sheet.row_dimensions[row].height or 18,15*ceil(width/70))
-            if '【反向余额重分类】' in str(cell.value) or '【票据连续计龄】' in str(cell.value):
-                cell.font = Font(name=cell.font.name,size=cell.font.sz,bold=True,color='9C0006')
-                cell.fill = PatternFill('solid',fgColor='FFF2CC')
+            text = str(value)
+            spec = {"自动换行": True, "对齐": "left", "垂直": "center"}
+            if '【反向余额重分类】' in text or '【票据连续计龄】' in text:
+                spec.update({"底色": "FFF2CC", "字色": "9C0006", "加粗": True})
+            plan.apply_overrides({f"{letter}{row}": spec})
+            width = sum(2 if ord(char) > 127 else 1 for char in text)
+            heights[row] = max(heights.get(row, ROW_HEIGHT), 15 * ceil(width / 70))
 
     # ─── 账龄汇总表 ───────────────────────────────────────────
     def _build_summary(self, results: list[AgingResult], config: dict) -> pd.DataFrame:
@@ -162,8 +169,7 @@ class ReportGenerator:
             row.append(r.total_check)
             rows.append(row)
 
-        # 合计行：先写真实合计值（回退模式下这就是最终值）；
-        # make_excel 模式下 _patch_summary_formulas 会再替换为 SUM 公式
+        # 合计行：直接写真实合计值（不写 SUM 公式，金额以引擎计算为准）
         if results:
             sum_row = ["合计", "", ""]
             for i in range(len(results[0].bucket_totals)):
@@ -246,34 +252,6 @@ class ReportGenerator:
                 "已对抵" if offset else ("无期末余额" if balance == 0 else "单侧余额"),
             ])
         return pd.DataFrame(rows, columns=headers)
-
-    def _patch_summary_formulas(self, output_path: PathLike,
-                                results: list[AgingResult], config: dict,
-                                sheet_name: str) -> None:
-        """在 make_excel 生成后，用 SUM 公式替换合计行的占位值"""
-        if not results:
-            return
-        wb = load_workbook(output_path)
-        ws = wb[sheet_name]
-
-        labels = self._get_bucket_labels(config)
-        sum_row = len(results) + 2  # make_excel 从第 1 行写表头，数据从第 2 行开始
-
-        # 数字列从第 5 列（科目编码=B, 科目名称=C, 明细名称=D 之后）
-        # make_excel 从 B 列(col=2) 开始写，所以：
-        # B=科目编码, C=科目名称, D=明细名称, E=分档1, F=分档2, ..., 最后=合计
-        first_num_col = 5  # E 列（B=科目编码, C=科目名称, D=明细名称 之后）
-        last_num_col = 5 + len(labels) + 1  # 固定反向余额列之后为合计列
-
-        for col in range(first_num_col, last_num_col + 1):
-            col_letter = get_column_letter(col)
-            cell = ws.cell(row=sum_row, column=col)
-            cell.value = f"=SUM({col_letter}2:{col_letter}{sum_row - 1})"
-            # 项目约定：蓝字=手动输入，黑字=公式；写公式后显式置黑
-            cell.font = Font(name=cell.font.name, size=cell.font.size,
-                             bold=cell.font.bold, color="000000")
-
-        wb.save(output_path)
 
     # ─── 期末余额构成及账龄依据 ───────────────────────────────────
     def _build_entries(self, results: list[AgingResult], config: dict) -> pd.DataFrame:
