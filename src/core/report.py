@@ -35,15 +35,13 @@ class ReportGenerator:
         aging_results: list[AgingResult],
         config: dict,
     ) -> None:
-        make_excel(self.build_frames(aging_results, config), output_path)
-        book = load_workbook(output_path)
-        try:
+        def finish_layout(book):
             book['账龄计算结果'].sheet_properties.tabColor = '0070C0'
             self._highlight_remarks(book['账龄计算结果'])
             self._highlight_remarks(book['期末余额构成及账龄依据'])
-            book.save(output_path)
-        finally:
-            book.close()
+
+        make_excel(self.build_frames(aging_results, config), output_path,
+                   postprocess=finish_layout)
 
     def build_frames(self, aging_results: list[AgingResult], config: dict):
         """结果页只有最终账龄；其他页保存计算依据，不再输出并列账龄。"""

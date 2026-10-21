@@ -31,6 +31,7 @@ HDR_ALIGN = Alignment(horizontal='center', vertical='center')
 # 数据字体颜色（摩根系：蓝=手动输入，黑=公式结果）
 DATA_FONT_BLUE = Font(name='Arial', size=11, color='0000FF')
 DATA_FONT_BLACK = Font(name='Arial', size=11, color='000000')
+DATA_FONT_TEXT = Font(name='Arial', size=11)
 
 # 合计行样式
 SUM_FILL = PatternFill(start_color='D6E4F0', end_color='D6E4F0', fill_type='solid')
@@ -121,6 +122,8 @@ def _estimate_column_width(header: str, series: pd.Series) -> int:
             w = _char_width(str(v))
             if w > max_w:
                 max_w = w
+            if max_w + 2 >= MAX_COL_WIDTH:
+                break
         except Exception:
             pass
     return max(MIN_COL_WIDTH, min(max_w + 2, MAX_COL_WIDTH))
@@ -137,8 +140,7 @@ def _apply_styles(ws, df: pd.DataFrame):
     start_col = 2         # B 列
 
     # 1. 行高 + A列宽
-    for r in range(1, nrows + 1):
-        ws.row_dimensions[r].height = ROW_HEIGHT
+    ws.sheet_format.defaultRowHeight = ROW_HEIGHT
     ws.column_dimensions['A'].width = A_COL_WIDTH
 
     # 2. 列宽估算 + 类型推断（一次扫描）
@@ -158,6 +160,7 @@ def _apply_styles(ws, df: pd.DataFrame):
         cell.font = HDR_FONT
         cell.fill = HDR_FILL
         cell.alignment = HDR_ALIGN
+        cell.border = TOP_BORDER
 
     # 4. 数据行（统一 Arial 11 + 数字格式 + 对齐 + 字体颜色）
     for ci in range(ncols):
@@ -169,10 +172,11 @@ def _apply_styles(ws, df: pd.DataFrame):
         for ri in range(2, nrows + 1):
             cell = ws.cell(row=ri, column=ci + start_col)
             # 所有单元格统一 Arial 11
-            cell.font = DATA_FONT_BLUE if is_num else Font(name='Arial', size=11)
+            cell.font = DATA_FONT_BLUE if is_num else DATA_FONT_TEXT
             cell.alignment = align
             if nf:
                 cell.number_format = nf
+            cell.border = BOTTOM_BORDER if ri == nrows else MID_BORDER
 
     # 5. 合计行检测与特殊格式（最后一行的首列含合计关键词）
     last_val = ws.cell(row=nrows, column=start_col).value
@@ -186,18 +190,6 @@ def _apply_styles(ws, df: pd.DataFrame):
             cell = ws.cell(row=nrows, column=ci + start_col)
             cell.font = SUM_FONT
             cell.fill = SUM_FILL
-
-    # 6. 边框（无竖线，上下粗中间虚线）
-    for ci in range(ncols):
-        col = ci + start_col
-        for ri in range(1, nrows + 1):
-            cell = ws.cell(row=ri, column=col)
-            if ri == 1:
-                cell.border = TOP_BORDER
-            elif ri == nrows:
-                cell.border = BOTTOM_BORDER
-            else:
-                cell.border = MID_BORDER
 
     # 6. 右侧空白列（宽 3）
     last_data_col = start_col + ncols - 1
@@ -227,7 +219,7 @@ def _write_data(ws, df: pd.DataFrame):
 # 主入口
 # ═══════════════════════════════════════════════════════════════════════════
 
-def make_excel(data, output_path: str, sheet_name: str = 'Sheet1') -> str:
+def make_excel(data, output_path: str, sheet_name: str = 'Sheet1', postprocess=None) -> str:
     """生成摩根系标准格式 Excel。
 
     参数
@@ -238,6 +230,8 @@ def make_excel(data, output_path: str, sheet_name: str = 'Sheet1') -> str:
         输出文件路径。
     sheet_name : str
         单 sheet 模式的工作表名称。
+    postprocess : callable, optional
+        首次保存前对工作簿做最终排版，避免重新打开并保存整本文件。
     返回
     ----
     str : 输出文件的绝对路径。
@@ -265,5 +259,7 @@ def make_excel(data, output_path: str, sheet_name: str = 'Sheet1') -> str:
 
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
+    if postprocess is not None:
+        postprocess(wb)
     wb.save(str(out))
     return str(out.absolute())

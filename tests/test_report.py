@@ -20,6 +20,26 @@ def test_生成Excel_只有一套最终账龄及追溯记录(tmp_path):
     wb.close()
 
 
+def test_备注排版在首次保存前完成(tmp_path, monkeypatch):
+    original_save = openpyxl.Workbook.save
+    saves = []
+
+    def track_save(book, path):
+        saves.append(path)
+        return original_save(book, path)
+
+    monkeypatch.setattr(openpyxl.Workbook, 'save', track_save)
+    result = FIFOEngine(date(2025, 6, 1), [(0, 365)]).calculate(
+        '1122', '应收账款', '客户A', 100, []
+    )
+    target = tmp_path / '只保存一次.xlsx'
+    ReportGenerator().generate(target, [result], {'buckets': [(0, 365)]})
+    assert len(saves) == 1
+    book = openpyxl.load_workbook(target)
+    assert book['账龄计算结果'].sheet_properties.tabColor.rgb == '000070C0'
+    book.close()
+
+
 def test_最终结果资产负债分别合计(tmp_path):
     from src.core.models import AgingResult
     results=[AgingResult('1122','应收账款','A','debit',100,0,0,100,bucket_totals=[100]),AgingResult('2202','应付账款','B','credit',50,0,0,50,bucket_totals=[50])]
